@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>事件与奖励系统</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 600px;
+            width: 100%;
+            background: white;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-top: 20px;
+        }
+        button {
+            margin: 10px 0;
+            padding: 10px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button.disabled {
+            background-color: #ccc; /* 灰色 */
+            cursor: not-allowed; /* 禁用状态 */
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container" id="daily-events">
+        <h2>每日事件</h2>
+        <button id="complete-daily-event">完成每日事件</button>
+        <p id="daily-event-status"></p>
+        <button onclick="showPage('longterm-events')">查看长期事件</button>
+        <button onclick="showPage('user-stats')">查看coin和artprise</button>
+    </div>
+
+    <div class="container hidden" id="longterm-events">
+        <h2>长期事件</h2>
+        <button onclick="completeLongTermEvent()">完成长期事件</button>
+        <button onclick="showPage('daily-events')">查看每日事件</button>
+        <button onclick="showPage('user-stats')">查看coin和artprise</button>
+    </div>
+
+    <div class="container hidden" id="user-stats">
+        <h2>用户状态</h2>
+        <p>当前coin: <span id="coin-count">0</span></p>
+        <p>当前artprise: <span id="artprise-count">0</span></p>
+        <button onclick="purchaseArtprise()">用coin购买artprise</button>
+        <button onclick="retrieveArtprise()">取回artprise</button>
+        <button onclick="showPage('daily-events')">查看每日事件</button>
+        <button onclick="showPage('longterm-events')">查看长期事件</button>
+    </div>
+
+    <script>
+        let coin = 0;
+        let artprise = 0;
+        let dailyEventCompleted = false;
+        let lastDailyEventDate = ''; // 用于记录上次完成每日事件的日期
+
+        // 保存数据
+        function saveData() {
+            localStorage.setItem('coin', coin);
+            localStorage.setItem('artprise', artprise);
+            localStorage.setItem('lastDailyEventDate', lastDailyEventDate); // 保存日期
+            localStorage.setItem('dailyEventCompleted', dailyEventCompleted); // 保存daily是否完成
+        }
+
+        // 读取数据
+        function loadData() {
+            coin = parseInt(localStorage.getItem('coin')) || 0;
+            artprise = parseInt(localStorage.getItem('artprise')) || 0;
+            lastDailyEventDate = localStorage.getItem('lastDailyEventDate') || ''; // 读取日期
+            dailyEventCompleted = localStorage.getItem('dailyEventCompleted') || false;
+            // dailyEventCompleted = lastDailyEventDate!= 
+            // 更新页面显示
+            document.getElementById('coin-count').innerText = coin;
+            document.getElementById('artprise-count').innerText = artprise;
+
+            // 检查是否需要重置每日事件
+            checkDailyEventReset();
+            updateDailyEventStatus();
+        }
+
+        function checkDailyEventReset() {
+            const currentDate = new Date().toISOString().split('T')[0]; // 获取当前日期
+            if (currentDate !== lastDailyEventDate) {
+                // 如果今天尚未完成每日事件，重置标志
+                dailyEventCompleted = false;
+                lastDailyEventDate = currentDate; // 更新为今天的日期
+                saveData(); // 保存新的日期
+            }
+        }
+
+        function updateDailyEventStatus() {
+            const statusText = dailyEventCompleted ? "今日每日事件已完成。" : "今日每日事件未完成。";
+            document.getElementById('daily-event-status').innerText = statusText;
+
+            // 更新按钮状态
+            const dailyEventButton = document.getElementById('complete-daily-event');
+            if (dailyEventCompleted) {
+                dailyEventButton.classList.add('disabled');
+                dailyEventButton.disabled = true; // 禁用按钮
+            } else {
+                dailyEventButton.classList.remove('disabled');
+                dailyEventButton.disabled = false; // 启用按钮
+            }
+        }
+
+        function showPage(pageId) {
+            document.querySelectorAll('.container').forEach(container => {
+                container.classList.add('hidden');
+            });
+            document.getElementById(pageId).classList.remove('hidden');
+
+            // 如果切换到用户状态页面，更新状态
+            if (pageId === 'user-stats') {
+                loadData(); // 重新加载数据以更新显示
+            }
+        }
+
+        // 在页面加载时读取数据
+        window.onload = function() {
+            loadData();
+            showPage('daily-events');
+        };
+
+        function completeDailyEvent() {
+            if (!dailyEventCompleted) {
+                coin += 10; 
+                dailyEventCompleted = true;
+                alert('完成每日事件，获得10个coin！');
+                saveData(); // 保存数据
+                updateDailyEventStatus(); // 更新状态显示
+            } else {
+                alert('每日事件已完成，请明天再来！');
+            }
+        }
+
+        function completeLongTermEvent() {
+            coin += 20; 
+            alert('完成长期事件，获得20个coin！');
+            saveData(); // 保存数据
+        }
+
+        function purchaseArtprise() {
+            const quantity = prompt('请输入购买artprise数量:');
+            const numQuantity = parseInt(quantity);
+            const totalCost = numQuantity * 5;
+            if (numQuantity > 0 && totalCost <= coin) {
+                artprise += numQuantity;
+                coin -= totalCost;
+                alert(`成功购买 ${numQuantity} 个artprise！`);
+                saveData(); // 保存数据
+                loadData(); // 更新显示
+            } else {
+                alert('输入无效或coin不足，无法购买！');
+            }
+        }
+
+        function retrieveArtprise() {
+            const quantity = prompt('请输入取回artprise数量:');
+            const numQuantity = parseInt(quantity);
+            if (numQuantity > 0 && numQuantity <= artprise) {
+                artprise -= numQuantity;
+                coin += numQuantity * 5;
+                alert(`成功取回 ${numQuantity} 个artprise！`);
+                saveData(); // 保存数据
+                loadData(); // 更新显示
+            } else {
+                alert('输入无效或artprise不足，无法取回！');
+            }
+        }
+
+        document.getElementById('complete-daily-event').addEventListener('click', completeDailyEvent);
+        showPage('daily-events');
+    </script>
+</body>
+</html>
